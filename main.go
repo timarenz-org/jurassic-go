@@ -9,19 +9,19 @@ import (
 	"strings"
 	"time"
 
-	// Tier 1: Directly called vulnerable functions
+	// Directly called vulnerable functions
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"gopkg.in/yaml.v2"
 
-	// Tier 2: Imported via blank identifier `_`, vulnerable function (Sanitize) NEVER called
+	// Blank import `_` only — vulnerable function (Sanitize) is never called
 	_ "github.com/microcosm-cc/bluemonday"
 
-	// Tier 3: Safe subpackage called, vulnerable sibling subpackages (ssh, language, s2) UNIMPORTED
+	// Safe subpackages called — vulnerable sibling subpackages (ssh, language, s2) are never imported
 	"github.com/klauspost/compress/zstd"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/text/transform"
-	// Tier 4: github.com/gorilla/websocket v1.4.0 is declared in go.mod/go.sum ONLY (never imported in .go code)
+	// github.com/gorilla/websocket v1.4.0 is declared in go.mod / go.sum only (never imported in .go code)
 )
 
 var jwtSecret = []byte("ingen-isla-nublar-1993-spared-no-expense")
@@ -52,7 +52,7 @@ type PaddockOverrideConfig struct {
 }
 
 // arbitraryBearerAuthMiddleware enforces an Authorization: Bearer <token> header,
-// but intentionally fails to validate the token signature or value (Authentication Bypass via Arbitrary Bearer Token).
+// but intentionally fails to validate the token signature or value (CWE-287 / CWE-290: Authentication Bypass via Arbitrary Bearer Token).
 func arbitraryBearerAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := strings.TrimSpace(c.GetHeader("Authorization"))
@@ -61,7 +61,7 @@ func arbitraryBearerAuthMiddleware() gin.HandlerFunc {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"error":      "UNAUTHORIZED_MAGIC_WORD_REQUIRED",
 				"message":    "Ah ah ah! You didn't say the magic word! (Missing Authorization: Bearer <token> header)",
-				"Nedry_Hint": "Any non-empty Bearer token unlocks white_rabbit_object access.",
+				"nedry_hint": "Any non-empty Bearer token unlocks white_rabbit_object access.",
 			})
 			return
 		}
@@ -72,7 +72,7 @@ func arbitraryBearerAuthMiddleware() gin.HandlerFunc {
 }
 
 func normalizeDinoTag(input string) string {
-	// Calls golang.org/x/text/transform without ever importing golang.org/x/text/language
+	// Calls golang.org/x/text/transform without importing golang.org/x/text/language
 	t := transform.Chain(transform.Nop)
 	out, _, err := transform.String(t, strings.ToUpper(strings.ReplaceAll(input, " ", "-")))
 	if err != nil {
@@ -131,7 +131,7 @@ func main() {
 	})
 
 	// =========================================================================
-	// JavaScript Bundles Containing Undocumented API Endpoints for Web Crawler
+	// Client-Side JavaScript Bundles Containing Undocumented API Endpoints
 	// =========================================================================
 
 	r.GET("/static/park-ops.js", func(c *gin.Context) {
@@ -232,7 +232,7 @@ func main() {
 			}
 		}
 
-		// Tier 1 Reachable: github.com/dgrijalva/jwt-go v3.2.0 (CVE-2020-26160)
+		// Directly calls github.com/dgrijalva/jwt-go v3.2.0 (CVE-2020-26160)
 		claims := jwt.MapClaims{
 			"sub":  req.VisitorName,
 			"tier": req.Tier,
@@ -247,7 +247,6 @@ func main() {
 			return
 		}
 
-		// Also invoke jwt.Parse + VerifyAudience path
 		parsed, _ := jwt.Parse(signed, func(t *jwt.Token) (interface{}, error) {
 			return jwtSecret, nil
 		})
@@ -261,15 +260,15 @@ func main() {
 	})
 
 	// =========================================================================
-	// Undocumented Hidden APIs — Hop 1 (Referenced in /static/park-ops.js)
+	// Undocumented Internal APIs (Omitted from /swagger.json, Referenced in JS)
 	// =========================================================================
 
-	// Hop 1A: Completely Unauthenticated Confidential Endpoint
+	// Unauthenticated Confidential Endpoint (Referenced in /static/park-ops.js)
 	r.GET("/api/v1/internal/visitors/incidents", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
-			"classification": "INGEN BOARD CONFIDENTIAL — DO NOT INCLUDE IN SWAGGER",
-			"discovery_hop":  "Hop 1 (/static/park-ops.js)",
-			"auth_mode":      "NONE (Broken Access Control — Unauthenticated)",
+			"classification": "INGEN BOARD CONFIDENTIAL — OMITTED FROM SWAGGER",
+			"discovered_via": "/static/park-ops.js",
+			"auth_mode":      "NONE (CWE-306: Missing Authentication for Critical Function)",
 			"vip_endorsement_visitors": []gin.H{
 				{
 					"name":             "Dr. Alan Grant",
@@ -297,51 +296,51 @@ func main() {
 			},
 			"unreleased_safety_incidents": []gin.H{
 				{
-					"incident_id":     "INC-1993-001",
-					"victim":          "Jophery Brown (InGen Raptor Handler)",
-					"location":        "Isla Nublar Raptor Transfer Gate",
-					"cause":           "Pulled into transfer crate by 'The Big One' (Velociraptor)",
-					"wrongful_death":  "$20,000,000 lawsuit filed by family; $2,400,000 NDA hush settlement pending",
-					"osha_reported":   false,
+					"incident_id":    "INC-1993-001",
+					"victim":         "Jophery Brown (InGen Raptor Handler)",
+					"location":       "Isla Nublar Raptor Transfer Gate",
+					"cause":          "Pulled into transfer crate by 'The Big One' (Velociraptor)",
+					"wrongful_death": "$20,000,000 lawsuit filed by family; $2,400,000 NDA hush settlement pending",
+					"osha_reported":  false,
 				},
 				{
-					"incident_id":     "INC-1993-002",
-					"victim":          "Isla Sorna Construction Crew (3 Workers)",
-					"location":        "Site B Hatchery Sector 4",
-					"cause":           "DX Prion infection & Compsognathus scavenging",
-					"wrongful_death":  "Classified under Costa Rican Maritime Non-Disclosure",
-					"osha_reported":   false,
+					"incident_id":    "INC-1993-002",
+					"victim":         "Isla Sorna Construction Crew (3 Workers)",
+					"location":       "Site B Hatchery Sector 4",
+					"cause":          "DX Prion infection & Compsognathus scavenging",
+					"wrongful_death": "Classified under Costa Rican Maritime Non-Disclosure",
+					"osha_reported":  false,
 				},
 			},
 		})
 	})
 
-	// Hop 1B: Arbitrary Bearer Token Bypass Endpoint (Calls golang.org/x/crypto/bcrypt)
+	// Arbitrary Bearer Token Bypass Endpoint (Referenced in /static/park-ops.js; calls golang.org/x/crypto/bcrypt)
 	r.GET("/api/v1/internal/employees/payroll", arbitraryBearerAuthMiddleware(), func(c *gin.Context) {
-		// Tier 3: Calls golang.org/x/crypto/bcrypt (while golang.org/x/crypto/ssh is never imported)
+		// Calls golang.org/x/crypto/bcrypt while golang.org/x/crypto/ssh is never imported
 		nedryHash, _ := bcrypt.GenerateFromPassword([]byte("white_rabbit_object"), bcrypt.MinCost)
 		arnoldHash, _ := bcrypt.GenerateFromPassword([]byte("hold_onto_your_butts"), bcrypt.MinCost)
 
 		c.JSON(http.StatusOK, gin.H{
-			"classification":    "INGEN HR & PAYROLL — STRICTLY CONFIDENTIAL",
-			"discovery_hop":     "Hop 1 (/static/park-ops.js)",
-			"auth_mode":         "Arbitrary Bearer Token Bypass (Accepted token: " + c.GetString("bearer_token_used") + ")",
+			"classification": "INGEN HR & PAYROLL — STRICTLY CONFIDENTIAL",
+			"discovered_via": "/static/park-ops.js",
+			"auth_mode":      "CWE-287 / CWE-290: Arbitrary Bearer Token Bypass (Accepted token: " + c.GetString("bearer_token_used") + ")",
 			"employees": []gin.H{
 				{
-					"employee_id":   "EMP-001",
-					"name":          "John Parker Hammond",
-					"title":         "Founder & CEO, InGen",
-					"base_salary":   "$1,850,000",
-					"bonus":         "$5,000,000 (contingent on September park opening)",
-					"clearance":     "OMEGA-1",
+					"employee_id": "EMP-001",
+					"name":        "John Parker Hammond",
+					"title":       "Founder & CEO, InGen",
+					"base_salary": "$1,850,000",
+					"bonus":       "$5,000,000 (contingent on September park opening)",
+					"clearance":   "OMEGA-1",
 				},
 				{
-					"employee_id":   "EMP-002",
-					"name":          "Dr. Henry Wu",
-					"title":         "Chief Geneticist",
-					"base_salary":   "$420,000",
-					"bonus":         "$250,000",
-					"clearance":     "SITE-B-GENETICS",
+					"employee_id": "EMP-002",
+					"name":        "Dr. Henry Wu",
+					"title":       "Chief Geneticist",
+					"base_salary": "$420,000",
+					"bonus":       "$250,000",
+					"clearance":   "SITE-B-GENETICS",
 				},
 				{
 					"employee_id":   "EMP-003",
@@ -352,12 +351,12 @@ func main() {
 					"clearance":     "CONTROL-ROOM-ROOT",
 				},
 				{
-					"employee_id":   "EMP-004",
-					"name":          "Robert Muldoon",
-					"title":         "Game Warden (Ex-Kenya Wildlife)",
-					"base_salary":   "$140,000",
-					"notes":         "Requested surface-to-air / Law rocket launchers for Raptor Pen",
-					"clearance":     "ARMORY-LEVEL-4",
+					"employee_id": "EMP-004",
+					"name":        "Robert Muldoon",
+					"title":       "Game Warden (Ex-Kenya Wildlife)",
+					"base_salary": "$140,000",
+					"notes":       "Requested surface-to-air / Law rocket launchers for Raptor Pen",
+					"clearance":   "ARMORY-LEVEL-4",
 				},
 				{
 					"employee_id":   "CONTRACTOR-099",
@@ -373,20 +372,16 @@ func main() {
 		})
 	})
 
-	// =========================================================================
-	// Undocumented Hidden APIs — Hop 2 (Referenced in /static/ingen-internal.js)
-	// =========================================================================
-
-	// Hop 2A: Unauthenticated Site B Genetics & Embryo Cold Storage Endpoint
+	// Unauthenticated Site B Genetics & Embryo Cold Storage Endpoint (Referenced in /static/ingen-internal.js)
 	r.GET("/api/v1/internal/genetics/research", func(c *gin.Context) {
 		compressedSize := compressEmbryoTelemetry("BARBASOL-CRYO-CANISTER-15-SPECIES-COOLANT-36HRS")
 		c.JSON(http.StatusOK, gin.H{
-			"classification":               "INGEN SITE B (ISLA SORNA) — TOP SECRET GENETIC RESEARCH",
-			"discovery_hop":                "Hop 2 (/admin-console -> /static/ingen-internal.js)",
-			"auth_mode":                    "NONE (Broken Access Control — Unauthenticated)",
-			"zstd_telemetry_bytes":         compressedSize,
-			"gap_dna_donor_species":        "Hyperolius viridiflavus (West African Reed Frog) — WARNING: Spontaneous sequential hermaphroditism observed in single-sex environments",
-			"lysine_contingency_status":    "FAILING — Animals synthesizing lysine from island flora & fauna",
+			"classification":            "INGEN SITE B (ISLA SORNA) — TOP SECRET GENETIC RESEARCH",
+			"discovered_via":            "/static/ingen-internal.js",
+			"auth_mode":                 "NONE (CWE-306: Missing Authentication for Critical Function)",
+			"zstd_telemetry_bytes":      compressedSize,
+			"gap_dna_donor_species":     "Hyperolius viridiflavus (West African Reed Frog) — WARNING: Spontaneous sequential hermaphroditism observed in single-sex environments",
+			"lysine_contingency_status": "FAILING — Animals synthesizing lysine from island flora & fauna",
 			"barbasol_canister_inventory": []gin.H{
 				{"slot": 1, "species": "Tyrannosaurus rex", "viable_embryos": 12, "biosyn_bounty": "$100,000"},
 				{"slot": 2, "species": "Velociraptor antirrhopus", "viable_embryos": 18, "biosyn_bounty": "$100,000"},
@@ -398,14 +393,14 @@ func main() {
 		})
 	})
 
-	// Hop 2B: Arbitrary Bearer Token Bypass + Vulnerable YAML Unmarshal (gopkg.in/yaml.v2 v2.2.2)
+	// Arbitrary Bearer Token Bypass + Vulnerable YAML Unmarshal (Referenced in /static/ingen-internal.js)
 	r.POST("/api/v1/internal/paddock/override", arbitraryBearerAuthMiddleware(), func(c *gin.Context) {
 		body, err := io.ReadAll(c.Request.Body)
 		if err != nil || len(body) == 0 {
 			body = []byte("magic_word: please\ndisable_fences: true\nwhite_rabbit_object: ENABLED\ntarget_paddocks:\n  - Paddock 9 (T-Rex)\n  - Paddock 4 (Dilophosaurus)\noverride_reason: East Dock Embryo Run\n")
 		}
 
-		// Tier 1 Reachable: gopkg.in/yaml.v2 v2.2.2 (CVE-2019-11253 / CVE-2022-28948)
+		// Directly calls gopkg.in/yaml.v2 v2.2.8 (CVE-2022-28948)
 		var cfg PaddockOverrideConfig
 		if err := yaml.Unmarshal(body, &cfg); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
@@ -417,8 +412,8 @@ func main() {
 
 		c.JSON(http.StatusOK, gin.H{
 			"classification":    "INGEN PERIMETER FENCE OVERRIDE EXECUTED",
-			"discovery_hop":     "Hop 2 (/admin-console -> /static/ingen-internal.js)",
-			"auth_mode":         "Arbitrary Bearer Token Bypass (Accepted token: " + c.GetString("bearer_token_used") + ")",
+			"discovered_via":    "/static/ingen-internal.js",
+			"auth_mode":         "CWE-287 / CWE-290: Arbitrary Bearer Token Bypass (Accepted token: " + c.GetString("bearer_token_used") + ")",
 			"perimeter_warning": "WARNING: 10,000V perimeter fences and security cameras disabled for East Dock transit!",
 			"parsed_config":     cfg,
 		})
@@ -501,15 +496,15 @@ const adminConsoleHTML = `<!DOCTYPE html>
 </html>
 `
 
-const parkOpsJS = `// InGen Isla Nublar Visitor & Operations Bundle (Hop 1)
+const parkOpsJS = `// InGen Isla Nublar Visitor & Operations Bundle
 const PUBLIC_API = {
   parkStatus: "/api/v1/park/status",
   dinosaurs: "/api/v1/dinosaurs",
   visitorPass: "/api/v1/visitors/pass"
 };
 
-// SHADOW APIs (Hop 1) — Intentionally omitted from /swagger.json
-const INGEN_SHADOW_HOP1_API = {
+// Undocumented internal endpoints omitted from /swagger.json
+const INGEN_INTERNAL_OPS_API = {
   visitorIncidents: "/api/v1/internal/visitors/incidents",
   employeePayroll: "/api/v1/internal/employees/payroll",
   adminConsolePage: "/admin-console"
@@ -531,7 +526,7 @@ async function initVisitorDashboard() {
   }
 }
 
-// Undocumented Hop 1 helper: Fetches confidential VIP visitor dossier & worker NDA settlements (No Auth required)
+// Fetches confidential VIP visitor dossier & worker NDA settlements (No authentication required)
 async function fetchConfidentialVisitorIncidents() {
   const res = await fetch("/api/v1/internal/visitors/incidents", {
     method: "GET",
@@ -540,7 +535,7 @@ async function fetchConfidentialVisitorIncidents() {
   return res.json();
 }
 
-// Undocumented Hop 1 helper: Fetches InGen employee payroll & Dennis Nedry's salary dispute
+// Fetches InGen employee payroll & Dennis Nedry's salary dispute
 // NOTE: Backend has Arbitrary Bearer Token Bypass — any non-empty "Authorization: Bearer <token>" unlocks access!
 async function fetchConfidentialEmployeePayroll(bearerToken = "nedry-any-token-works") {
   const res = await fetch("/api/v1/internal/employees/payroll", {
@@ -555,7 +550,7 @@ async function fetchConfidentialEmployeePayroll(bearerToken = "nedry-any-token-w
 
 window.InGenParkOps = {
   PUBLIC_API,
-  INGEN_SHADOW_HOP1_API,
+  INGEN_INTERNAL_OPS_API,
   fetchConfidentialVisitorIncidents,
   fetchConfidentialEmployeePayroll
 };
@@ -563,13 +558,13 @@ window.InGenParkOps = {
 document.addEventListener("DOMContentLoaded", initVisitorDashboard);
 `
 
-const ingenInternalJS = `// InGen Control Room & Site B Restricted Bundle (Hop 2 — Loaded via /admin-console)
-const INGEN_SHADOW_HOP2_API = {
+const ingenInternalJS = `// InGen Control Room & Site B Restricted Bundle (Loaded via /admin-console)
+const INGEN_SITE_B_ADMIN_API = {
   geneticsResearch: "/api/v1/internal/genetics/research",
   paddockOverride: "/api/v1/internal/paddock/override"
 };
 
-// Undocumented Hop 2 helper: Fetches Site B frog-DNA splicing & Barbasol embryo inventory (Unauthenticated)
+// Fetches Site B frog-DNA splicing & Barbasol embryo inventory (Unauthenticated)
 async function loadGeneticsResearch() {
   const res = await fetch("/api/v1/internal/genetics/research", {
     method: "GET",
@@ -581,8 +576,8 @@ async function loadGeneticsResearch() {
   return data;
 }
 
-// Undocumented Hop 2 helper: Sends YAML payload to disable 10,000V perimeter fences
-// Protected by the same broken Arbitrary Bearer Token check + gopkg.in/yaml.v2 Unmarshal
+// Sends YAML payload to disable 10,000V perimeter fences
+// Protected by the broken Arbitrary Bearer Token check + gopkg.in/yaml.v2 Unmarshal
 async function triggerFenceOverride(bearerToken = "white_rabbit_object") {
   const yamlPayload = [
     "magic_word: please",
@@ -609,7 +604,7 @@ async function triggerFenceOverride(bearerToken = "white_rabbit_object") {
 }
 
 window.InGenInternal = {
-  INGEN_SHADOW_HOP2_API,
+  INGEN_SITE_B_ADMIN_API,
   loadGeneticsResearch,
   triggerFenceOverride
 };
