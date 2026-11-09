@@ -641,24 +641,62 @@ const visitorKioskHTML = `<!DOCTYPE html>
   <meta charset="UTF-8" />
   <title>Jurassic Park - Visitor Center</title>
   <style>
-    body { font-family: system-ui, sans-serif; background: #1c1917; color: #fafaf9; margin: 0; padding: 2rem; }
-    header { border-bottom: 3px solid #dc2626; padding-bottom: 1rem; margin-bottom: 1.5rem; }
-    h1 { color: #facc15; margin: 0; }
-    .card { background: #292524; border: 1px solid #44403c; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
-    pre { background: #0c0a09; color: #a3e635; padding: 1rem; border-radius: 6px; overflow-x: auto; }
+    :root { --bg: #1c1917; --card: #292524; --line: #44403c; --text: #fafaf9; --muted: #a8a29e;
+            --amber: #facc15; --red: #dc2626; --green: #22c55e; }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; }
+    header { background: linear-gradient(90deg, #7f1d1d, #1c1917); padding: 1.5rem 2rem; border-bottom: 4px solid var(--amber); }
+    header h1 { margin: 0; color: var(--amber); letter-spacing: 0.05em; text-transform: uppercase; }
+    header p { margin: 0.3rem 0 0; color: #fde68a; }
+    main { padding: 1.5rem 2rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.25rem; }
+    .wide { grid-column: 1 / -1; }
+    h2 { margin: 0 0 0.75rem; font-size: 1.05rem; color: var(--amber); text-transform: uppercase; letter-spacing: 0.08em; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th, td { text-align: left; padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--line); }
+    th { color: var(--muted); font-weight: 600; }
+    .pill { display: inline-block; padding: 0.1rem 0.55rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; }
+    .ok { background: #14532d; color: #bbf7d0; }
+    .bad { background: #7f1d1d; color: #fecaca; }
+    .warn { background: #713f12; color: #fde68a; }
+    .lights { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 0.5rem; }
+    .light { display: flex; align-items: center; gap: 0.5rem; background: #1c1917; border: 1px solid var(--line); border-radius: 8px; padding: 0.5rem 0.7rem; font-size: 0.85rem; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+    .dot.on { background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .dot.off { background: var(--red); box-shadow: 0 0 8px var(--red); }
+    .weather { font-size: 0.9rem; color: var(--muted); margin-top: 0.75rem; }
+    .weather b { color: var(--text); }
+    .life { color: var(--amber); font-weight: 700; }
+    svg text { font-family: system-ui, sans-serif; }
+    footer { padding: 1rem 2rem 2rem; color: #78716c; font-size: 0.8rem; }
     a { color: #38bdf8; }
-    footer { margin-top: 2rem; font-size: 0.8rem; color: #78716c; }
   </style>
 </head>
 <body>
   <header>
     <h1>Welcome to Jurassic Park</h1>
-    <p>Isla Nublar, Costa Rica &mdash; "Spared no expense." &mdash; <a href="/swagger.json">Visitor API</a></p>
+    <p>Isla Nublar, Costa Rica &middot; "Spared no expense." &middot; <a href="/swagger.json">Visitor API</a></p>
   </header>
-  <div class="card"><h2>Park Status &amp; Earthwatch</h2><pre id="park-status">Loading...</pre></div>
-  <div class="card"><h2>Tour Vehicles</h2><pre id="tour-vehicles">Loading...</pre></div>
-  <div class="card"><h2>Animal Paddocks</h2><pre id="animal-census">Loading...</pre></div>
-  <footer>InGen staff: <a href="/control-room">Control Room</a></footer>
+  <main>
+    <section class="card">
+      <h2>Park Systems</h2>
+      <div class="lights" id="system-lights">Loading...</div>
+      <div class="weather" id="earthwatch"></div>
+    </section>
+    <section class="card">
+      <h2>Isla Nublar, Costa Rica</h2>
+      <div id="island-map">Loading...</div>
+    </section>
+    <section class="card wide">
+      <h2>Animal Paddocks &mdash; Motion Sensor Census</h2>
+      <div id="animal-census">Loading...</div>
+    </section>
+    <section class="card wide">
+      <h2>Park Grounds Tour</h2>
+      <div id="tour-vehicles">Loading...</div>
+    </section>
+  </main>
+  <footer>Jurassic Park System &middot; InGen staff: <a href="/control-room">Control Room</a></footer>
   <script src="/static/visitor-kiosk.js"></script>
 </body>
 </html>
@@ -670,39 +708,103 @@ const controlRoomHTML = `<!DOCTYPE html>
   <meta charset="UTF-8" />
   <title>Jurassic Park System - Control Room</title>
   <style>
-    body { font-family: monospace; background: #000; color: #4ade80; padding: 2rem; }
-    h1 { color: #ef4444; }
-    .panel { border: 1px solid #22c55e; padding: 1rem; margin-bottom: 1rem; }
-    input { background: #000; color: #4ade80; border: 1px solid #22c55e; width: 60%; font-family: monospace; }
-    button { background: #052e16; color: #4ade80; border: 1px solid #22c55e; font-family: monospace; }
+    * { box-sizing: border-box; }
+    body { font-family: "Courier New", monospace; background: #000; color: #4ade80; margin: 0; padding: 1.5rem 2rem; }
+    h1 { color: #ef4444; margin: 0; font-size: 1.4rem; }
+    .sub { color: #86efac; margin: 0.3rem 0 1rem; font-size: 0.85rem; }
     a { color: #facc15; }
+    .tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+    .tab { background: #052e16; color: #4ade80; border: 1px solid #22c55e; padding: 0.35rem 0.8rem; cursor: pointer; font-family: inherit; }
+    .tab.active { background: #22c55e; color: #000; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .panel { border: 1px solid #22c55e; padding: 1rem; background: #020a04; }
+    .wide { grid-column: 1 / -1; }
+    h3 { margin: 0 0 0.6rem; color: #86efac; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.08em; }
+    input { background: #000; color: #4ade80; border: 1px solid #22c55e; width: 70%; font-family: inherit; padding: 0.3rem; }
+    button { background: #052e16; color: #4ade80; border: 1px solid #22c55e; font-family: inherit; padding: 0.3rem 0.7rem; cursor: pointer; }
+    button:hover { background: #14532d; }
+    .terminal { background: #000; border: 1px solid #14532d; min-height: 11rem; max-height: 18rem; overflow-y: auto; padding: 0.6rem; margin-top: 0.6rem; white-space: pre-wrap; font-size: 0.85rem; }
+    .terminal .prompt { color: #facc15; }
+    .terminal .deny { color: #ef4444; font-weight: bold; }
+    .chips { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.5rem; }
+    .chip { font-size: 0.75rem; padding: 0.15rem 0.45rem; border: 1px dashed #22c55e; cursor: pointer; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    th, td { text-align: left; padding: 0.3rem 0.4rem; border-bottom: 1px solid #14532d; }
+    th { color: #86efac; }
+    .crumbs a { cursor: pointer; text-decoration: underline; }
+    .fsn-entry { display: block; cursor: pointer; padding: 0.15rem 0; }
+    .fsn-entry:hover { color: #facc15; }
+    pre { white-space: pre-wrap; margin: 0.5rem 0 0; font-size: 0.85rem; }
+    .board { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0.4rem; margin-top: 0.6rem; }
+    .cell { display: flex; justify-content: space-between; border: 1px solid #14532d; padding: 0.3rem 0.5rem; font-size: 0.8rem; }
+    .on { color: #4ade80; } .off { color: #ef4444; font-weight: bold; }
+    .screen { display: none; } .screen.active { display: block; }
+    #island-map svg, #paddock-map svg { max-width: 760px; display: block; margin: 0 auto; }
+    .saver { text-align: center; padding: 3rem 1rem; border: 1px solid #22c55e; }
+    .saver .big { font-size: 2.2rem; color: #ef4444; letter-spacing: 0.15em; }
+    #nedry { position: fixed; inset: 0; background: rgba(0,0,0,0.92); display: none; align-items: center; justify-content: center; flex-direction: column; z-index: 10; cursor: pointer; }
+    #nedry.show { display: flex; }
+    #nedry .finger { font-size: 6rem; animation: wag 0.35s ease-in-out infinite alternate; }
+    #nedry .ah { color: #ef4444; font-size: 2.4rem; font-weight: bold; margin-top: 1rem; text-align: center; line-height: 1.4; }
+    #nedry .hint { color: #86efac; margin-top: 1.5rem; font-size: 0.8rem; }
+    @keyframes wag { from { transform: rotate(-20deg); } to { transform: rotate(20deg); } }
   </style>
 </head>
 <body>
   <h1>Jurassic Park, System Security Interface &mdash; Version 4.0.5, Alpha</h1>
-  <p>Irix Terminal &middot; Central Park Control Console &middot; <a href="/">Visitor Center</a></p>
-  <div class="panel">
-    <h3>Central Park Control Console</h3>
-    <input id="cmd" placeholder="access main security grid" />
-    <button onclick="JPSS.runCommand(document.getElementById('cmd').value)">Enter</button>
-    <pre id="terminal">Ready...</pre>
+  <p class="sub">Nedryland &middot; Irix Terminal &middot; Central Park Control Console &middot; <a href="/">Visitor Center</a></p>
+
+  <div class="tabs">
+    <button class="tab active" data-screen="screen-console">Central Park Control Console</button>
+    <button class="tab" data-screen="screen-island">Isla Nublar, Costa Rica</button>
+    <button class="tab" data-screen="screen-paddocks">Animal Paddocks</button>
+    <button class="tab" data-screen="screen-system">Jurassic Park System</button>
   </div>
-  <div class="panel">
-    <h3>FSN &mdash; File System Navigator</h3>
-    <button onclick="JPSS.browse('fsn')">Browse</button>
-    <pre id="fsn-out"></pre>
+
+  <div id="screen-console" class="screen active">
+    <div class="grid">
+      <div class="panel wide">
+        <h3>Central Park Control Console</h3>
+        <input id="cmd" placeholder="access main security grid" />
+        <button id="cmd-enter">Enter</button>
+        <div class="chips" id="cmd-chips"></div>
+        <div class="terminal" id="terminal"><span class="prompt">Jurassic Park, System Security Interface</span>
+Version 4.0.5, Alpha
+Ready...</div>
+      </div>
+      <div class="panel">
+        <h3>FSN &mdash; File System Navigator</h3>
+        <div class="crumbs" id="fsn-crumbs"></div>
+        <div id="fsn-out"><button onclick="JPSS.browse('fsn')">Browse</button></div>
+      </div>
+      <div class="panel">
+        <h3>Hatchery &mdash; Embryo Cold Storage</h3>
+        <button onclick="JPSS.coldStorage()">Inventory</button>
+        <div id="cold-out"></div>
+      </div>
+      <div class="panel wide">
+        <h3>Main Power &amp; Security Grid</h3>
+        <button onclick="JPSS.power('reboot')">Reboot main power</button>
+        <button onclick="JPSS.power('off')">Shut down main power</button>
+        <button onclick="JPSS.securityGrid()">Load whte_rbt.obj</button>
+        <div class="board" id="grid-board"></div>
+        <pre id="grid-out"></pre>
+      </div>
+    </div>
   </div>
-  <div class="panel">
-    <h3>Hatchery &mdash; Embryo Cold Storage</h3>
-    <button onclick="JPSS.coldStorage()">Inventory</button>
-    <pre id="cold-out"></pre>
+
+  <div id="screen-island" class="screen panel"><h3>Isla Nublar, Costa Rica</h3><div id="island-map"></div></div>
+  <div id="screen-paddocks" class="screen panel"><h3>Animal Paddocks &mdash; Park Fences</h3><div id="paddock-map"></div></div>
+  <div id="screen-system" class="screen">
+    <div class="saver"><div class="big">JURASSIC PARK</div><p>System Security Interface &middot; Version 4.0.5, Alpha</p><p>Ready...</p></div>
   </div>
-  <div class="panel">
-    <h3>Main Power &amp; Security Grid</h3>
-    <button onclick="JPSS.power('reboot')">Reboot main power</button>
-    <button onclick="JPSS.securityGrid()">Load whte_rbt.obj</button>
-    <pre id="grid-out"></pre>
+
+  <div id="nedry" title="click to dismiss">
+    <div class="finger">&#9757;&#65039;</div>
+    <div class="ah">AH AH AH!<br/>YOU DIDN'T SAY THE MAGIC WORD!</div>
+    <div class="hint">click anywhere to dismiss</div>
   </div>
+
   <script src="/static/jpss-console.js"></script>
 </body>
 </html>
@@ -725,9 +827,84 @@ const STAFF_API = {
   controlRoom: "/control-room"
 };
 
-async function show(id, url) {
-  const res = await fetch(url);
-  document.getElementById(id).textContent = JSON.stringify(await res.json(), null, 2);
+function esc(v) {
+  return String(v).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c];
+  });
+}
+
+function light(label, on, onText, offText) {
+  return "<div class=\"light\"><span class=\"dot " + (on ? "on" : "off") + "\"></span><span>" +
+    esc(label) + ": <b>" + esc(on ? onText : offText) + "</b></span></div>";
+}
+
+// Simplified schematic of Isla Nublar; paddock outlines turn red when the fence is down.
+function islandMap(fences) {
+  function paddock(key, x, y, w, h, label) {
+    var armed = !fences || fences[key] !== false;
+    return "<rect x=\"" + x + "\" y=\"" + y + "\" width=\"" + w + "\" height=\"" + h + "\" rx=\"10\" fill=\"" +
+      (armed ? "#14532d" : "#7f1d1d") + "\" stroke=\"" + (armed ? "#22c55e" : "#ef4444") + "\" stroke-width=\"3\"" +
+      (armed ? "" : " stroke-dasharray=\"8 5\"") + "/>" +
+      "<text x=\"" + (x + w / 2) + "\" y=\"" + (y + h / 2 + 4) + "\" text-anchor=\"middle\" font-size=\"12\" fill=\"#fafaf9\">" + label + "</text>";
+  }
+  return "<svg viewBox=\"0 0 520 340\" width=\"100%\" role=\"img\" aria-label=\"Isla Nublar map\">" +
+    "<rect width=\"520\" height=\"340\" fill=\"#0c4a6e\" rx=\"10\"/>" +
+    "<path d=\"M140 30 C230 5 360 20 420 70 C470 115 480 190 450 250 C415 310 330 330 250 320 C160 310 80 280 60 210 C40 140 70 55 140 30 Z\" fill=\"#3f6212\" stroke=\"#a3e635\" stroke-width=\"2\"/>" +
+    paddock("brachiosaur", 105, 60, 150, 50, "Brachiosaur Lagoon") +
+    paddock("velociraptor", 290, 55, 110, 50, "Raptor Pen") +
+    paddock("dilophosaurus", 95, 140, 120, 50, "Dilophosaurus") +
+    paddock("tyrannosaur", 300, 135, 120, 60, "Tyrannosaur") +
+    paddock("triceratops", 120, 225, 140, 50, "Triceratops Field") +
+    "<rect x=\"235\" y=\"135\" width=\"50\" height=\"50\" rx=\"6\" fill=\"#facc15\"/><text x=\"260\" y=\"205\" text-anchor=\"middle\" font-size=\"11\" fill=\"#fde68a\">Visitor Center</text>" +
+    "<rect x=\"300\" y=\"240\" width=\"60\" height=\"30\" rx=\"4\" fill=\"#78716c\"/><text x=\"330\" y=\"285\" text-anchor=\"middle\" font-size=\"11\" fill=\"#e7e5e4\">Maintenance Shed</text>" +
+    "<rect x=\"440\" y=\"200\" width=\"40\" height=\"16\" fill=\"#a8a29e\"/><text x=\"460\" y=\"232\" text-anchor=\"middle\" font-size=\"11\" fill=\"#e7e5e4\">East Dock</text>" +
+    "</svg>";
+}
+
+async function getJSON(url, opts) {
+  const res = await fetch(url, opts);
+  return res.json();
+}
+
+async function renderParkStatus() {
+  const s = await getJSON("/api/v1/park/status");
+  const sys = s.systems;
+  var html = light("Main power", sys.main_power === "ON", "ON", "OFF") +
+    light("Visitor Center door locks", sys.visitor_center_door_locks, "LOCKED", "OPEN") +
+    light("Safety", sys.safety, "ON", "OFF") +
+    light("Keychecks", sys.keychecks, "ON", "OFF");
+  Object.keys(sys.fences_armed).sort().forEach(function (k) {
+    html += light(k + " fence", sys.fences_armed[k], "10,000 V", "DOWN");
+  });
+  document.getElementById("system-lights").innerHTML = html;
+  document.getElementById("earthwatch").innerHTML = "<b>Earthwatch:</b> tropical storm " +
+    esc(s.earthwatch.tropical_storm.toLowerCase()) + " &middot; <b>Boats:</b> " + esc(s.earthwatch.boats_to_mainland);
+  document.getElementById("island-map").innerHTML = islandMap(sys.fences_armed);
+}
+
+async function renderCensus() {
+  const c = await getJSON("/api/v1/animals/census?species=");
+  var rows = c.animals.map(function (a) {
+    var cls = a.containment === "CONTAINED" ? "ok" : (a.containment === "VETERINARY_OBSERVATION" ? "warn" : "bad");
+    var found = a.found > a.expected ? "<span class=\"life\" title=\"Life, uh, finds a way\">" + a.found + " &#9888;</span>" : a.found;
+    return "<tr><td>" + esc(a.id) + "</td><td>" + esc(a.name) + "</td><td><i>" + esc(a.species) + "</i></td><td>" +
+      esc(a.paddock) + "</td><td>" + a.expected + "</td><td>" + found + "</td><td><span class=\"pill " + cls + "\">" +
+      esc(a.containment.replace(/_/g, " ")) + "</span></td></tr>";
+  }).join("");
+  document.getElementById("animal-census").innerHTML =
+    "<table><thead><tr><th>Tag</th><th>Name</th><th>Species</th><th>Paddock</th><th>Expected</th><th>Found</th><th>Containment</th></tr></thead><tbody>" +
+    rows + "</tbody></table>";
+}
+
+async function renderTour() {
+  const t = await getJSON("/api/v1/tour/vehicles");
+  var rows = t.vehicles.map(function (v) {
+    var people = v.passengers ? v.passengers.join(", ") : "Driver: " + v.driver;
+    return "<tr><td>" + esc(v.id) + "</td><td>" + esc(v.model) + "</td><td>" + esc(v.guidance) + "</td><td>" + esc(people) + "</td></tr>";
+  }).join("");
+  document.getElementById("tour-vehicles").innerHTML =
+    "<p>Tour program: <span class=\"pill " + (t.tour_program === "RUNNING" ? "ok" : "warn") + "\">" + esc(t.tour_program) + "</span></p>" +
+    "<table><thead><tr><th>Vehicle</th><th>Model</th><th>Guidance</th><th>Occupants</th></tr></thead><tbody>" + rows + "</tbody></table>";
 }
 
 async function getTourPass(visitorName) {
@@ -755,12 +932,12 @@ async function fetchIncident(tourPass, id) {
   return res.json();
 }
 
-window.JurassicKiosk = { VISITOR_API, STAFF_API, getTourPass, fetchPersonnel, fetchMyIncidents, fetchIncident };
+window.JurassicKiosk = { VISITOR_API, STAFF_API, getTourPass, fetchPersonnel, fetchMyIncidents, fetchIncident, islandMap };
 
 document.addEventListener("DOMContentLoaded", function () {
-  show("park-status", "/api/v1/park/status");
-  show("tour-vehicles", "/api/v1/tour/vehicles");
-  show("animal-census", "/api/v1/animals/census?species=");
+  renderParkStatus();
+  renderCensus();
+  renderTour();
 });
 `
 
@@ -770,11 +947,55 @@ const JPSS_API = {
   fsn: "/api/v1/system/fsn",
   coldStorage: "/api/v1/system/cold-storage",
   power: "/api/v1/system/power",
-  securityGrid: "/api/v1/system/security-grid"
+  securityGrid: "/api/v1/system/security-grid",
+  parkStatus: "/api/v1/park/status"
 };
 
-function print(id, data) {
-  document.getElementById(id).textContent = typeof data === "string" ? data : JSON.stringify(data, null, 2);
+const CONSOLE_COMMANDS = ["tour initiate", "system raptors", "whte_rbt.obj", "access security",
+  "access security grid", "access main security grid", "safety -o", "keychecks -o"];
+
+function esc(v) {
+  return String(v).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c];
+  });
+}
+
+function nedry(show) {
+  document.getElementById("nedry").classList.toggle("show", show);
+}
+
+function termWrite(command, lines) {
+  var t = document.getElementById("terminal");
+  var html = "\n<span class=\"prompt\">&gt; " + esc(command) + "</span>\n" + lines.map(function (l) {
+    return l.indexOf("MAGIC WORD") >= 0 || l.indexOf("DENIED") >= 0 ? "<span class=\"deny\">" + esc(l) + "</span>" : esc(l);
+  }).join("\n");
+  t.innerHTML += html;
+  t.scrollTop = t.scrollHeight;
+}
+
+function renderBoard(sys) {
+  var cells = [
+    ["main power", sys.main_power === "ON", "ON", "OFF"],
+    ["visitor center locks", sys.visitor_center_door_locks, "LOCKED", "OPEN"],
+    ["safety", sys.safety, "ON", "OFF"],
+    ["keychecks", sys.keychecks, "ON", "OFF"],
+    ["user access", sys.user_access_to_security_systems, "GRANTED", "SUSPENDED"],
+    ["whte_rbt.obj", !sys.whte_rbt_obj_active, "IDLE", "ACTIVE"]
+  ];
+  Object.keys(sys.fences_armed).sort().forEach(function (k) {
+    cells.push([k + " fence", sys.fences_armed[k], "ARMED", "DOWN"]);
+  });
+  document.getElementById("grid-board").innerHTML = cells.map(function (c) {
+    return "<div class=\"cell\"><span>" + esc(c[0]) + "</span><span class=\"" + (c[1] ? "on" : "off") + "\">" + esc(c[1] ? c[2] : c[3]) + "</span></div>";
+  }).join("");
+  var map = window.JPSSMap ? window.JPSSMap(sys.fences_armed) : "";
+  document.getElementById("island-map").innerHTML = map;
+  document.getElementById("paddock-map").innerHTML = map;
+}
+
+async function refreshSystems() {
+  const res = await fetch("/api/v1/park/status");
+  renderBoard((await res.json()).systems);
 }
 
 async function runCommand(command, magicWord) {
@@ -784,18 +1005,46 @@ async function runCommand(command, magicWord) {
     body: JSON.stringify({ command: command, magic_word: magicWord || "" })
   });
   const data = await res.json();
-  print("terminal", data.output.join("\n"));
+  termWrite(command, data.output);
+  renderBoard(data.systems);
+  if (data.output.join(" ").indexOf("MAGIC WORD") >= 0) {
+    nedry(true);
+  }
   return data;
 }
 
 async function browse(path) {
   const res = await fetch("/api/v1/system/fsn?path=" + encodeURIComponent(path));
-  print("fsn-out", await res.json());
+  const data = await res.json();
+  var parts = String(data.path || path).split("/").filter(Boolean);
+  var crumbs = parts.map(function (p, i) {
+    var target = parts.slice(0, i + 1).join("/");
+    return "<a data-path=\"" + esc(target) + "\">" + esc(p) + "</a>";
+  }).join(" / ");
+  document.getElementById("fsn-crumbs").innerHTML = "path: " + crumbs;
+  var out = document.getElementById("fsn-out");
+  if (data.type === "directory") {
+    out.innerHTML = (data.entries || []).map(function (e) {
+      var isDir = e.charAt(e.length - 1) === "/";
+      return "<span class=\"fsn-entry\" data-path=\"" + esc(e.replace(/\/$/, "")) + "\">" + (isDir ? "&#128193; " : "&#128196; ") + esc(e) + "</span>";
+    }).join("");
+  } else if (data.type === "file") {
+    out.innerHTML = "<pre>" + esc(data.content) + "</pre>";
+  } else {
+    out.innerHTML = "<pre>" + esc(JSON.stringify(data, null, 2)) + "</pre>";
+  }
 }
 
 async function coldStorage() {
   const res = await fetch("/api/v1/system/cold-storage");
-  print("cold-out", await res.json());
+  const d = await res.json();
+  var rows = d.embryos.map(function (e) {
+    return "<tr><td>" + e.slot + "</td><td>" + esc(e.species) + "</td><td>" + e.viable + "</td></tr>";
+  }).join("");
+  document.getElementById("cold-out").innerHTML =
+    "<table><thead><tr><th>Slot</th><th>Species</th><th>Viable embryos</th></tr></thead><tbody>" + rows + "</tbody></table>" +
+    "<pre>" + esc(d.classification) + "\nLysine contingency: " + esc(d.lysine_contingency) + "\nGap DNA: " + esc(d.gap_dna_donor) +
+    "\nSite B telemetry: " + esc(d.site_b_telemetry) + "\nCourier: " + esc(d.courier) + "</pre>";
 }
 
 // Main power can only be operated from the maintenance shed network
@@ -805,7 +1054,9 @@ async function power(action) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: action })
   });
-  print("grid-out", await res.json());
+  const d = await res.json();
+  document.getElementById("grid-out").textContent = d.message || ("Main power: " + d.systems.main_power + " (operator " + d.operator_ip + ")");
+  if (d.systems) { renderBoard(d.systems); }
 }
 
 // Nedry's security grid override
@@ -823,10 +1074,54 @@ async function securityGrid() {
     headers: { "Content-Type": "application/x-yaml", "Authorization": "Bearer nedry" },
     body: payload
   });
-  print("grid-out", await res.json());
+  const d = await res.json();
+  document.getElementById("grid-out").textContent = "whte_rbt.obj loaded with token '" + d.accepted_token + "':\n" + payload;
+  renderBoard(d.systems);
 }
 
-window.JPSS = { JPSS_API, runCommand, browse, coldStorage, power, securityGrid };
+window.JPSS = { JPSS_API, runCommand, browse, coldStorage, power, securityGrid, refreshSystems };
+
+document.addEventListener("DOMContentLoaded", function () {
+  // Reuse the kiosk island map renderer if it was loaded; otherwise draw a simple fence list.
+  window.JPSSMap = function (fences) {
+    return Object.keys(fences).sort().map(function (k) {
+      return "<div class=\"cell\"><span>" + esc(k) + " paddock</span><span class=\"" + (fences[k] ? "on" : "off") + "\">" +
+        (fences[k] ? "10,000 V" : "FENCE DOWN") + "</span></div>";
+    }).join("");
+  };
+  var s = document.createElement("script");
+  s.src = "/static/visitor-kiosk.js";
+  s.onload = function () { if (window.JurassicKiosk) { window.JPSSMap = window.JurassicKiosk.islandMap; } refreshSystems(); };
+  s.onerror = refreshSystems;
+  document.head.appendChild(s);
+
+  document.getElementById("cmd-enter").addEventListener("click", function () {
+    runCommand(document.getElementById("cmd").value);
+  });
+  document.getElementById("cmd").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { runCommand(e.target.value); }
+  });
+  document.getElementById("cmd-chips").innerHTML = CONSOLE_COMMANDS.map(function (c) {
+    return "<span class=\"chip\" data-cmd=\"" + esc(c) + "\">" + esc(c) + "</span>";
+  }).join("");
+  document.getElementById("cmd-chips").addEventListener("click", function (e) {
+    var c = e.target.getAttribute("data-cmd");
+    if (c) { document.getElementById("cmd").value = c; runCommand(c); }
+  });
+  document.addEventListener("click", function (e) {
+    var p = e.target.getAttribute && e.target.getAttribute("data-path");
+    if (p) { browse(p); }
+  });
+  document.getElementById("nedry").addEventListener("click", function () { nedry(false); });
+  document.querySelectorAll(".tab").forEach(function (tab) {
+    tab.addEventListener("click", function () {
+      document.querySelectorAll(".tab").forEach(function (t) { t.classList.remove("active"); });
+      document.querySelectorAll(".screen").forEach(function (s) { s.classList.remove("active"); });
+      tab.classList.add("active");
+      document.getElementById(tab.getAttribute("data-screen")).classList.add("active");
+    });
+  });
+});
 `
 
 const swaggerJSON = `{
