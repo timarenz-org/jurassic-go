@@ -1,6 +1,6 @@
-# Multi-stage build for Jurassic-Go (InGen Isla Nublar Park Operations API)
-# Uses Go 1.21-alpine so container SCA scanners (--scan-go-standard-library / Snyk Container)
-# detect both 3rd-party .go.buildinfo modules and Go 1.21.13 standard library advisories.
+# Multi-stage build for jurassic-go (Jurassic Park System).
+# golang:1.21-alpine keeps an old Go standard library in the binary, so container SCA
+# (--scan-go-standard-library) reports Go stdlib CVEs in addition to module CVEs.
 FROM golang:1.21-alpine AS builder
 
 WORKDIR /src
@@ -14,6 +14,7 @@ RUN apk add --no-cache ca-certificates tzdata
 
 WORKDIR /app
 COPY --from=builder /app/jurassic-go /app/jurassic-go
+COPY fsn /app/fsn
 
 EXPOSE 8080
 ENV PORT=8080
