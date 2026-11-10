@@ -1,6 +1,6 @@
 # Multi-stage build for jurassic-go.
-# golang:1.21-alpine keeps an old Go standard library in the binary, so container SCA
-# reports Go stdlib CVEs in addition to module CVEs.
+# golang:1.21-alpine keeps an old Go standard library in the binary, so the container
+# image includes Go stdlib CVEs in addition to module CVEs.
 FROM golang:1.21-alpine AS builder
 
 WORKDIR /src

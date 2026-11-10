@@ -1,6 +1,6 @@
 // Command jurassic-go is the Jurassic Park visitor and staff web app.
 //
-// It is an intentionally vulnerable test target for security scanners.
+// It is intentionally vulnerable and meant for security testing.
 // See README.md for the expected findings. Do not deploy it with real data.
 package main
 
