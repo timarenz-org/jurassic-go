@@ -70,34 +70,6 @@
     if (id) { showBooking(id); }
   });
 
-  // Header navigation: scroll to the section, highlight it, and focus its main input.
-  function flash(el) {
-    el.scrollIntoView({ behavior: "smooth", block: "center" });
-    el.classList.remove("flash");
-    void el.offsetWidth;
-    el.classList.add("flash");
-    el.addEventListener("animationend", function () { el.classList.remove("flash"); }, { once: true });
-  }
-
-  document.querySelector("nav").addEventListener("click", function (e) {
-    var target = e.target.getAttribute("data-nav");
-    if (!target) { return; }
-    e.preventDefault();
-    if (target === "dinosaurs") {
-      flash($("dinosaurs"));
-      $("search-input").focus({ preventScroll: true });
-    } else if (target === "map") {
-      flash($("map"));
-    } else if (target === "bookings") {
-      if (pass()) {
-        flash($("bookings"));
-      } else {
-        flash($("pass-panel"));
-        $("pass-name").focus({ preventScroll: true });
-      }
-    }
-  });
-
   loadWeather();
   search("");
   loadBookings();
