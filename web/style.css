@@ -42,3 +42,7 @@ footer { padding: 1.5rem 2.5rem; font-size: .8rem; color: #888; }
 .panel button.small { width: auto; margin-top: 0; margin-left: .4rem; }
 .row > span:last-child { display: flex; align-items: center; white-space: nowrap; }
 .list li > span:first-child { flex: 1; }
+nav a { cursor: pointer; }
+nav a:hover { color: #d62828; }
+.flash { animation: flash 1.2s ease-out; }
+@keyframes flash { 0% { box-shadow: 0 0 0 4px rgba(252, 191, 73, .9); } 100% { box-shadow: 0 0 0 4px rgba(252, 191, 73, 0); } }
