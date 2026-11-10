@@ -38,6 +38,7 @@ Visitors don't sign in. They get a tour pass by entering a name on `/`.
 
 | Route | Access | Feature |
 | :--- | :--- | :--- |
+| `GET /healthz` | Public | Health check (database and metrics exporter status) |
 | `GET /api/v1/dinosaurs?q=` | Public | Dinosaur search |
 | `GET /api/v1/weather` | Public | Weather (optional upstream feed via `EARTHWATCH_URL`) |
 | `GET /api/v1/park/map?file=` | Public | Park map download |
@@ -85,5 +86,6 @@ Visitors don't sign in. They get a tour pass by entering a name on `/`.
 | 20 | Hidden functionality (`whte_rbt.obj`) | CWE-912 | Feeding-schedule import | Staff |
 | 21 | Hard-coded override word | CWE-798 | Re-arming fences | Staff (control room) |
 | 22 | Hard-coded signing key fallback | CWE-798 | Session and tour pass signing | — |
+| 23 | Hard-coded cloud credentials exposed in the health check (fake AWS key) | CWE-798, CWE-200 | Health check | Public |
 
 Staff sessions are verified properly (HS256 only, role read from the database).

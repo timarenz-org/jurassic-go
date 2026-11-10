@@ -21,6 +21,7 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 	registerWeb(r)
+	r.GET("/healthz", healthz)
 
 	// Public visitor API.
 	r.GET("/api/v1/dinosaurs", searchDinosaurs)
