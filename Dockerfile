@@ -1,11 +1,12 @@
-# Multi-stage build for jurassic-go (Jurassic Park System).
+# Multi-stage build for jurassic-go.
 # golang:1.21-alpine keeps an old Go standard library in the binary, so container SCA
-# (--scan-go-standard-library) reports Go stdlib CVEs in addition to module CVEs.
+# reports Go stdlib CVEs in addition to module CVEs.
 FROM golang:1.21-alpine AS builder
 
 WORKDIR /src
 COPY go.mod go.sum ./
-COPY main.go ./
+COPY *.go ./
+COPY web ./web
 
 RUN CGO_ENABLED=0 GOOS=linux go build -mod=mod -o /app/jurassic-go .
 
@@ -14,7 +15,7 @@ RUN apk add --no-cache ca-certificates tzdata
 
 WORKDIR /app
 COPY --from=builder /app/jurassic-go /app/jurassic-go
-COPY fsn /app/fsn
+COPY assets /app/assets
 
 EXPOSE 8080
 ENV PORT=8080

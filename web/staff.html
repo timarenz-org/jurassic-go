@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Jurassic Park - Staff</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header>
+    <a class="logo" href="/"><span class="badge">🦖</span><span class="word">JURASSIC PARK</span></a>
+    <nav><a href="/">Visitor site</a><a href="#" id="signout" class="hidden">Sign out</a></nav>
+  </header>
+
+  <section class="hero">
+    <h1>Staff</h1>
+    <p id="welcome">InGen employees only.</p>
+  </section>
+
+  <main class="single" id="signin">
+    <div class="panel">
+      <h3>Sign in</h3>
+      <form id="signin-form">
+        <input id="username" placeholder="Username" autocomplete="username" />
+        <input id="password" type="password" placeholder="Password" autocomplete="current-password" style="margin-top:.5rem" />
+        <button type="submit">Sign in</button>
+      </form>
+      <div class="error" id="signin-error"></div>
+    </div>
+  </main>
+
+  <div class="dash hidden" id="dashboard">
+    <div class="panel">
+      <h3>My profile</h3>
+      <form id="profile-form">
+        <input id="profile-name" placeholder="Name" />
+        <input id="profile-email" placeholder="Email" style="margin-top:.5rem" />
+        <button type="submit">Save</button>
+      </form>
+      <div class="muted" id="profile-role" style="margin-top:.5rem"></div>
+    </div>
+
+    <div class="panel">
+      <h3>Staff roster</h3>
+      <div id="roster"></div>
+    </div>
+
+    <div class="panel">
+      <h3>Bookings export</h3>
+      <p>Download all visitor bookings (CSV, zstd compressed).</p>
+      <button class="ghost" id="export">Download export</button>
+    </div>
+
+    <div class="panel">
+      <h3>Feeding schedule</h3>
+      <p>Paste the paddock feeding schedule (YAML).</p>
+      <textarea id="schedule">feedings:
+  - paddock: tyrannosaur
+    time: "08:00"
+    food: goat
+  - paddock: velociraptor
+    time: "09:00"
+    food: cattle</textarea>
+      <button id="schedule-import">Import schedule</button>
+      <div class="muted" id="schedule-result"></div>
+    </div>
+
+    <div class="panel hidden" id="systems-panel">
+      <h3>Park systems</h3>
+      <div id="systems"></div>
+      <div class="error" id="systems-error"></div>
+    </div>
+  </div>
+
+  <footer>&copy; 1993 International Genetic Technologies, Inc.</footer>
+  <script src="/static/staff.js"></script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Jurassic Park</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header>
+    <a class="logo" href="/"><span class="badge">🦖</span><span class="word">JURASSIC PARK</span></a>
+    <nav><a href="#dinosaurs">Dinosaurs</a><a href="#map">Park map</a><a href="#bookings">My bookings</a></nav>
+  </header>
+
+  <section class="hero">
+    <h1>Welcome to Jurassic Park</h1>
+    <p>Isla Nublar, Costa Rica &middot; Spared no expense.</p>
+    <div class="chips" id="status-chips"><span class="chip">Loading park status&hellip;</span></div>
+  </section>
+
+  <main>
+    <div id="dinosaurs">
+      <form class="search" id="search-form">
+        <input id="search-input" placeholder="Search dinosaurs, e.g. Velociraptor" />
+        <button type="submit">Search</button>
+      </form>
+      <div class="grid" id="dino-grid"></div>
+    </div>
+
+    <aside>
+      <div class="panel" id="pass-panel">
+        <h3>Get your tour pass</h3>
+        <p>Enter your name to book the Park Grounds Tour.</p>
+        <form id="pass-form">
+          <input id="pass-name" placeholder="Dr. Alan Grant" />
+          <button type="submit">Get tour pass</button>
+        </form>
+        <div class="error" id="pass-error"></div>
+      </div>
+
+      <div class="panel hidden" id="bookings">
+        <h3>My bookings</h3>
+        <p id="bookings-who"></p>
+        <ul class="list" id="bookings-list"></ul>
+        <div class="muted" id="booking-detail"></div>
+      </div>
+
+      <div class="panel" id="map">
+        <h3>Park map</h3>
+        <p>Download the official Isla Nublar map.</p>
+        <a href="/api/v1/park/map?file=isla-nublar.svg"><button class="ghost" type="button">Download map</button></a>
+      </div>
+    </aside>
+  </main>
+
+  <footer>&copy; 1993 International Genetic Technologies, Inc. &middot; <a href="/staff">Staff sign-in</a></footer>
+  <script src="/static/app.js"></script>
+</body>
+</html>

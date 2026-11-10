@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 340" width="520" height="340">
+  <title>Isla Nublar - Jurassic Park visitor map</title>
+  <rect width="520" height="340" fill="#cfe8f3"/>
+  <path d="M140 30 C230 5 360 20 420 70 C470 115 480 190 450 250 C415 310 330 330 250 320 C160 310 80 280 60 210 C40 140 70 55 140 30 Z" fill="#c5dca0" stroke="#6b8e23" stroke-width="2"/>
+  <g font-family="sans-serif" font-size="12" fill="#1f1d1a" text-anchor="middle">
+    <rect x="105" y="60" width="150" height="50" rx="10" fill="#fff" stroke="#d62828"/><text x="180" y="89">Brachiosaur Lagoon</text>
+    <rect x="290" y="55" width="110" height="50" rx="10" fill="#fff" stroke="#d62828"/><text x="345" y="84">Raptor Pen</text>
+    <rect x="95" y="140" width="120" height="50" rx="10" fill="#fff" stroke="#d62828"/><text x="155" y="169">Dilophosaurus</text>
+    <rect x="300" y="135" width="120" height="60" rx="10" fill="#fff" stroke="#d62828"/><text x="360" y="169">Tyrannosaur</text>
+    <rect x="120" y="225" width="140" height="50" rx="10" fill="#fff" stroke="#d62828"/><text x="190" y="254">Triceratops Field</text>
+    <rect x="235" y="135" width="50" height="50" rx="6" fill="#fcbf49"/><text x="260" y="205">Visitor Center</text>
+    <rect x="440" y="200" width="40" height="16" fill="#999"/><text x="460" y="232">East Dock</text>
+  </g>
+</svg>
