@@ -4,14 +4,14 @@ go 1.21
 
 require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
-	github.com/gin-gonic/gin v1.6.3
-	github.com/gorilla/websocket v1.4.0
-	github.com/klauspost/compress v1.9.5
-	github.com/microcosm-cc/bluemonday v1.0.4
-	golang.org/x/crypto v0.0.0-20200709230013-948cd5f35899
-	golang.org/x/text v0.3.3
+	github.com/gin-gonic/gin v1.9.1
+	github.com/gorilla/websocket v1.5.3
+	github.com/klauspost/compress v1.20.2
+	github.com/microcosm-cc/bluemonday v1.0.16
+	golang.org/x/crypto v0.56.0
+	golang.org/x/text v0.41.0
 	gopkg.in/yaml.v2 v2.2.8
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
+	gopkg.in/yaml.v3 v3.0.0-20220521103104-8f96da9f5d5e
 	modernc.org/sqlite v1.29.10
 )
 
@@ -35,8 +35,8 @@ require (
 	github.com/ncruces/go-strftime v0.1.9 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/ugorji/go/codec v1.1.7 // indirect
-	golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3 // indirect
-	golang.org/x/sys v0.19.0 // indirect
+	golang.org/x/net v0.62.0 // indirect
+	golang.org/x/sys v0.44.0 // indirect
 	modernc.org/gc/v3 v3.0.0-20240107210532-573471604cb6 // indirect
 	modernc.org/libc v1.49.3 // indirect
 	modernc.org/mathutil v1.6.0 // indirect
